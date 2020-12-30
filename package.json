@@ -1,6 +1,6 @@
 {
   "name": "@tlowerison/react-d3-graph",
-  "version": "1.0.7",
+  "version": "1.0.0",
   "description": "A React graph component that uses d3-force.",
   "homepage": "https://github.com/tlowerison/graph",
   "license": "MIT",
