@@ -1,9 +1,10 @@
-// const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
-const CopyPlugin = require("copy-webpack-plugin");
+const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
 const TerserPlugin = require("terser-webpack-plugin");
 const nodeExternals = require("webpack-node-externals");
 const path = require("path");
 const pkg = require("./package.json");
+
+const shouldProfile = process.env.PROFILE === "true";
 
 module.exports = {
   devtool: "source-map",
@@ -48,16 +49,8 @@ module.exports = {
     umdNamedDefine: true,
   },
   plugins: [
-    // new BundleAnalyzerPlugin(),
-    new CopyPlugin({
-      patterns: [
-        {
-          from: "src/jq/jq.wasm.wasm",
-          to: ".",
-        },
-      ],
-    }),
-  ],
+    shouldProfile && new BundleAnalyzerPlugin(),
+  ].filter(Boolean),
   resolve: {
     extensions: ["*", ".js", ".jsx", ".ts", ".tsx"],
     fallback: {

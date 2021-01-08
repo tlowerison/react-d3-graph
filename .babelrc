@@ -10,4 +10,7 @@
     "@babel/plugin-syntax-dynamic-import",
     "ramda",
 	],
+  "ignore": [
+    "**/*.d.ts",
+  ],
 }

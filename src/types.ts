@@ -34,11 +34,9 @@ export enum GraphLinkDirection {
 
 export interface GraphNodeConfig {
   path: string;
-  label?: string;
   labels?: string;
   links?: {
     direction: GraphLinkDirection;
-    label?: string;
     labels?: string[];
     node: GraphNodeConfig;
   }[];
