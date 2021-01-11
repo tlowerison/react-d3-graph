@@ -4,7 +4,7 @@ A React component which handles converting a root object and a collection of [jm
 
 ### Example
 ```tsx
-import React, { useMemo } from "react";
+import React from "react";
 import { Graph } from "@tlowerison/react-d3-graph";
 
 type Service = {
@@ -21,23 +21,20 @@ interface Props {
 }
 
 export const ServiceGraph = ({ service }: Props) => {
-  const groups = useMemo(() => [
-    {
-      label: "Dependencies",
-      nodes: [{ path: "dependencies", label: "scope" }],
-    },
-    {
-      label: "Dependents",
-      nodes: [{ path: "dependents", label: "scope" }],
-    },
-  ], [service]);
-
   if (!service) return null;
-
   return (
     <Graph
       idField="uuid"
-      groups={groups}
+      groups={[
+        {
+          label: "Dependencies",
+          nodes: [{ path: "dependencies", label: "scope" }],
+        },
+        {
+          label: "Dependents",
+          nodes: [{ path: "dependents", label: "scope" }],
+        },
+      ]}
       root={service}
     />
   );
