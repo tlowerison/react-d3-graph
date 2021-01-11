@@ -1,6 +1,6 @@
 ## React D3 Graph
 \[Work in progress\]
-A React component which handles converting a root object and a collection of [jq](https://stedolan.github.io/jq/) queries into a list of nodes, links and groups.
+A React component which handles converting a root object and a collection of [jmespath](https://jmespath.org/) queries into a list of nodes, links and groups.
 
 ### Example
 ```tsx
@@ -24,11 +24,11 @@ export const ServiceGraph = ({ service }: Props) => {
   const groups = useMemo(() => [
     {
       label: "Dependencies",
-      nodes: [{ path: ".dependencies", label: ".scope" }],
+      nodes: [{ path: "dependencies", label: "scope" }],
     },
     {
       label: "Dependents",
-      nodes: [{ path: ".dependents", label: ".scope" }],
+      nodes: [{ path: "dependents", label: "scope" }],
     },
   ], [service]);
 
