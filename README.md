@@ -68,7 +68,6 @@ const flight = {
         name: "Los Angeles International Airport",
         city: "Los Angeles, CA, United States",
         code: "LAX",
-
       },
       {
         __typename: "Airport",
@@ -189,33 +188,24 @@ export const FlightGraph = () => (
     <h2>Flight: {flight.code}</h2>
     <Graph
       idField="uuid"
+      fontSize={{ nodeName: 7 }}
       showRoot
       config={{
-        labels: "code",
+        name: ["code", code => `Flight: ${code}`],
         links: [
+          { node: { path: "from" } },
+          { node: { path: "to" } },
           {
-            labels: ["From"],
-            node: { path: "from", labels: "code" },
-          },
-          {
-            labels: ["To"],
-            node: { path: "to", labels: "code" },
-          },
-          {
-            labels: ["Airline"],
             node: {
               path: "airline",
-              labels: "name",
               links: [{
                 direction: GraphLinkDirection.None,
                 node: {
                   path: "hubs",
-                  labels: "code",
                   links: [{
                     direction: GraphLinkDirection.None,
                     node: {
                       path: "airlines",
-                      labels: "code",
                     },
                   }],
                 },
