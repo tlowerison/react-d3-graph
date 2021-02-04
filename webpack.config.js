@@ -22,6 +22,15 @@ module.exports = {
         ],
       },
       {
+        test: /\.worker\.[jt]s$/i,
+        use: [{
+          loader: "comlink-loader",
+          options: {
+            singleton: true
+          }
+        }],
+      },
+      {
         test: /\.[jt]sx?$/,
         exclude: /node_modules/,
         use: [
