@@ -1,6 +1,6 @@
 {
   "name": "@tlowerison/react-d3-graph",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A React graph component that uses d3-force.",
   "homepage": "https://github.com/tlowerison/react-d3-graph",
   "license": "MIT",
@@ -84,13 +84,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tlowerison/graph.git"
+    "url": "git+https://github.com/tlowerison/react-d3-graph.git"
   },
   "keywords": [
     "react",
     "components"
   ],
   "bugs": {
-    "url": "https://github.com/tlowerison/graph/issues"
+    "url": "https://github.com/tlowerison/react-d3-graph/issues"
   }
 }
