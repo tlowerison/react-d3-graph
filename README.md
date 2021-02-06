@@ -1,6 +1,10 @@
 ## React D3 Graph
 A React component which handles converting a root object and a collection of [jmespath](https://jmespath.org/) queries into a list of nodes, links and groups.
 
+## Install
+```
+yarn add @tlowerison/react-d3-graph
+```
 ## Example
 A small example graph with deeply nested data can be put together really quickly with the `Graph` component. Both plots come from the same data (shown at the end); the idea is that the root object contains information about a flight on Alaska Airlines from San Francisco International Airport (SFO) to Portland International Airport (PDX). The nested Alaska Airlines object contains a list of it five hubs, and in the PDX airport object in that hub list, there is a list of all airlines that flying out of PDX.
 
