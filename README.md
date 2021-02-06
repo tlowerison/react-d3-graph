@@ -14,15 +14,16 @@ A small example graph with deeply nested data can be put together really quickl
 ```tsx
 import React from "react";
 import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
+import { data } from "./data";
 
 export const FlightGraph = () => (
   <>
-    <h2>Flight: {flight.code}</h2>
+    <h2>Flight: {data.code}</h2>
     <Graph
       idField="uuid"
       defaultNameField="code"
       fontSize={{ nodeName: 7 }}
-      root={flight}
+      root={data}
       config={{
         name: ({ code }) => `Flight ${code}`,
         links: [
@@ -68,15 +69,16 @@ export const FlightGraph = () => (
 ```tsx
 import React from "react";
 import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
+import { data } from "./data";
 
 export const FlightGraph = () => (
   <>
-    <h2>Flight: {flight.code}</h2>
+    <h2>Flight: {data.code}</h2>
     <Graph
       idField="uuid"
       defaultNameField="code"
       fontSize={{ nodeName: 7 }}
-      root={flight}
+      root={data}
       config={[
         {
           name: "Flight 3368",
