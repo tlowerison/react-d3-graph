@@ -4,12 +4,12 @@ import styles from "./styles.module.scss";
 type Props = {
   fontSize: number;
   groupLabelOpacity: number;
-  label: string;
+  name: string | undefined;
 };
 
-export const Group = ({ fontSize, groupLabelOpacity, label }: Props) => (
+export const Group = ({ fontSize, groupLabelOpacity, name }: Props) => (
   <g className="group">
-    {label && (
+    {name && (
       <text
         className={styles.svgGroupText}
         textAnchor="middle"
@@ -17,7 +17,7 @@ export const Group = ({ fontSize, groupLabelOpacity, label }: Props) => (
         opacity={groupLabelOpacity}
         style={{ fontSize: fontSize }}
       >
-        {label}
+        {name}
       </text>
     )}
   </g>

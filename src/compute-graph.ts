@@ -5,18 +5,18 @@ import {
   GraphLink,
   GraphNode,
   GraphNodeConfig,
-  GraphNodeLabel,
   GraphLinkDirection,
+  Path,
 } from "./types";
-import { concat, has, identity, lensProp, mergeDeepWith, uniqBy, unnest, view } from "ramda";
+import { concat, has, lensProp, mergeDeepWith, uniqBy, unnest, view } from "ramda";
 import { search } from "jmespath";
 
 export const rootJMESPath = ".";
 
 export type Config<R extends Entity> = {
+  defaultNameField?: string;
   height: number;
   idField: string;
-  linkDistance: number;
   nodeRadius: number;
   resolveEntities: boolean;
   root: R;
@@ -26,22 +26,22 @@ export type Config<R extends Entity> = {
 
 export const computeGraph = async <R>({
   config,
+  defaultNameField,
   height,
   idField,
-  linkDistance,
   nodeRadius,
   resolveEntities,
   root,
   showRoot,
   width,
 }: Config<R> & { config: GraphGroupConfig[] }) => {
-  const groups = new Array<GraphGroup>(config.length).fill({ key: "", label: "", size: 0 });
+  const groups = new Array<GraphGroup>(config.length).fill({ key: "", name: "", size: 0 });
   const allLinks = new Array(config.length).fill(null);
   const allNodes = new Array(config.length).fill(null);
   for (let i = 0; i < config.length; i += 1) {
-    const { key: preKey, label, nodes: nodeConfigs } = config[i];
-    const key = preKey || `${i}-label-${label || ""}`;
-    const [nodes, links] = getNodesAndLinks({ idField, nodeConfigs, nodeRadius, root });
+    const { key: preKey, name, nodes: nodeConfigs } = config[i];
+    const key = preKey || `${i}-name-${name || ""}`;
+    const [nodes, links] = getNodesAndLinks({ defaultNameField, idField, nodeConfigs, nodeRadius, root });
     // TODO: Initialize clusters using a quadtree to avoid initial collisions
     let x = 0;
     let y = 0;
@@ -49,8 +49,8 @@ export const computeGraph = async <R>({
       x = width / 2 * (Math.random() - 1/2);
       y = height / 2 * (Math.random() - 1/2);
     }
-    const randCoord = toRandCoord({ x, y }, linkDistance * Math.sqrt(nodes.length - 1))
-    groups[i] = { key, label: label || "", size: nodes.length };
+    const randCoord = toRandCoord({ x, y }, 7.5 * nodeRadius * Math.sqrt(nodes.length - 1))
+    groups[i] = { key, name: name || "", size: nodes.length };
     allLinks[i] = links;
     allNodes[i] = nodes.map(({ labels, ...rest }) => ({
       ...rest,
@@ -76,6 +76,7 @@ export const computeGraph = async <R>({
 };
 
 type GetNodesAndLinksConfig<R extends Entity> = {
+  defaultNameField?: string;
   idField: string;
   root: R;
   nodeConfigs?: GraphNodeConfig[];
@@ -84,6 +85,7 @@ type GetNodesAndLinksConfig<R extends Entity> = {
 };
 
 const getNodesAndLinks = <R extends Entity>({
+  defaultNameField,
   idField,
   nodeConfigs = [],
   nodeMap = {},
@@ -95,29 +97,40 @@ const getNodesAndLinks = <R extends Entity>({
   const links: GraphLink[] = [];
   for (let i = 0; i < nodeConfigs.length; i += 1) {
     const nodeConfig = nodeConfigs[i];
-    const { links: linkConfigs = [], radius } = nodeConfig;
+    const { className, links: linkConfigs = [], path, label, name, style } = nodeConfig;
+    const pathPaths = Array.isArray(path) ? path : [path];
+    const labelPaths = !label || Array.isArray(label) ? label : [label];
+    let namePaths: Path[] | undefined;
+    if (!name) {
+      namePaths = defaultNameField ? [defaultNameField] : undefined;
+    } else {
+      namePaths = Array.isArray(name) ? name : [name];
+    }
 
-    const [path, processPath] = typeof nodeConfig.path === "string"
-      ? [nodeConfig.path, identity]
-      : nodeConfig.path;
-
-    const [name, processName] = typeof nodeConfig.name === "string" || !nodeConfig.name
-      ? [nodeConfig.name || "name", identity]
-      : nodeConfig.name;
-
-    const [labels, processLabels] = typeof nodeConfig.labels === "string" || !nodeConfig.labels
-      ? [nodeConfig.labels, identity]
-      : nodeConfig.labels;
-
-    const preNodes = path === rootJMESPath ? [root] : findArray(root, path).map(processPath);
-    let newNodes: GraphNode[] = preNodes
-      .map(preNode => ({
+    const preNodes = path === rootJMESPath ? [root] : findArray<R>(root, pathPaths);
+    let newNodes: GraphNode[] = preNodes.map(preNode => {
+      const labels = !labelPaths ? [] : findArray(preNode, labelPaths as Path[]).map(e => {
+        const value = typeof e === "string" ? e : JSON.stringify(e);
+        return {
+          __typename: preNode.__typename,
+          id: value,
+          value,
+        };
+      });
+      if (has(preNode.id, nodeMap)) {
+        nodeMap[preNode.id].labels.push(...labels);
+      }
+      return {
         ...preNode,
+        className,
+        labels,
+        style,
         id: preNode[idField],
-        labels: findArray(preNode, labels).map(e => typeof e === "string" ? e : JSON.stringify(e)).map(processLabels),
-        name: processName(search(preNode, name)),
-        radius: !radius ? nodeRadius : findNumber(preNode, radius, "node.radius", nodeRadius),
-      }));
+        degree: { in: 0, out: 0 },
+        name: findValue(preNode, namePaths as Path[], "", "string"),
+        radius: nodeRadius,
+      };
+    });
     nodes.push(...newNodes);
     newNodes = newNodes.filter(preNode => !has(preNode[idField], nodeMap))
     for (let j = 0; j < newNodes.length; j += 1) {
@@ -127,36 +140,38 @@ const getNodesAndLinks = <R extends Entity>({
       nodes.push(newNode);
     }
 
-    if (labels) {
-      const oldNodes = preNodes.filter(preNode => has(preNode.id, nodeMap));
-      for (let j = 0; j < oldNodes.length; j += 1) {
-        const oldNode = oldNodes[j];
-        const newLabels = findArray(oldNode, labels).map(label => ({ ...label, id: label[idField] })) as GraphNodeLabel[];
-        if (!nodeMap[oldNode.id].labels) {
-          nodeMap[oldNode.id].labels = newLabels;
-        } else { // @ts-ignore
-          nodeMap[oldNode.id].labels.push(...newLabels);
-        }
-      }
-    }
-
     for (let j = 0; j < linkConfigs.length; j += 1) {
-      const { direction = GraphLinkDirection.None, labels, node: nodeConfig } = linkConfigs[j];
+      const { className, direction = GraphLinkDirection.None, labels = [], nodes: nodeConfigs, style } = linkConfigs[j];
       for (let k = 0; k < preNodes.length; k += 1) {
         const preNode = preNodes[k];
         const [descendentNodes, subLinks, childrenNodes] = getNodesAndLinks({
+          defaultNameField,
           idField,
           nodeRadius,
           nodeMap,
-          nodeConfigs: [nodeConfig],
+          nodeConfigs,
           root: preNode,
         });
-        links.push(...childrenNodes.map(childNode => ({
-          labels,
-          direction,
-          source: direction === GraphLinkDirection.Out ? preNode[idField] : childNode.id,
-          target: direction === GraphLinkDirection.Out ? childNode.id : preNode[idField],
-        })));
+        const parentNode = nodeMap[preNode[idField]];
+        links.push(...childrenNodes.map(childNode => {
+          const { sourceNode, targetNode } = getSourceAndTarget(parentNode, childNode, direction);
+          sourceNode.degree.out += 1;
+          targetNode.degree.in += 1;
+          if (direction === GraphLinkDirection.Both || direction === GraphLinkDirection.None) {
+            sourceNode.degree.in += 1;
+            targetNode.degree.out += 1;
+          }
+          return {
+            className,
+            direction,
+            labels,
+            style,
+            source: sourceNode.id,
+            sourceDegree: sourceNode.degree,
+            target: targetNode.id,
+            targetDegree: targetNode.degree,
+          };
+        }));
         links.push(...subLinks);
         allNodes.push(...descendentNodes);
       }
@@ -165,31 +180,54 @@ const getNodesAndLinks = <R extends Entity>({
   return [allNodes, links, nodes] as const;
 };
 
+const getSourceAndTarget = (parentNode: GraphNode, childNode: GraphNode, direction: GraphLinkDirection) =>
+  direction === GraphLinkDirection.Out
+    ? { sourceNode: parentNode, targetNode: childNode }
+    : { sourceNode: childNode, targetNode: parentNode };
+
 const deepMerge = mergeDeepWith((a, b) => Array.isArray(a) && Array.isArray(b) ? concat(a, b) : b);
 
-const findArray = (data: object, path: string | undefined) => {
-  if (!path) return [];
-  try {
-    let jqResult = search(data, path);
-    if (!Array.isArray(jqResult)) {
-      jqResult = [jqResult];
+const find = <T = any>(data: object, path: Path, fallback?: T): T | undefined => {
+  if (!data || !path) return fallback;
+  let jqResult: T;
+  if (typeof path === "string") {
+    try {
+      jqResult = search(data, path);
+    } catch (error) {
+      throw new Error(`Path error: couldn't parse JMESPath path: ${path}`);
     }
-    return jqResult.filter((value: any) => value !== undefined && value !== null);
-  } catch (error) {
-    throw new Error(`JMESPath error: couldn't parse path: ${path}`);
+  } else {
+    try {
+      jqResult = path(data);
+    } catch (error) {
+      throw new Error(`Path error: couldn't operate path fn`);
+    }
   }
+  return jqResult;
 };
 
-const findNumber = (data: object, path: string | undefined, fieldName: string, fallback: number) => {
-  if (!path) return fallback;
-  try {
-    let jqResult = search(data, path);
-    if (typeof jqResult !== "number") {
-      console.warn(`JMESPath warning: path "${path}" returned a non-number result for ${fieldName}, falling back to ${fallback}`);
-    }
-  } catch (error) {
-    throw new Error(`JMESpath error: couldn't parse path: "${path}"`);
+const findArray = <T>(data: object, paths: Path[]): T[] => {
+  let result = [data].filter(Boolean);
+  for (let i = 0; i < paths.length; i += 1) {
+    if (result === undefined) return [];
+    const path = paths[i];
+    result = unnest(result.map(result => {
+      const newResult = find(result, path);
+      return !Array.isArray(newResult) ? [newResult] : newResult;
+    })).filter(Boolean);
   }
+  return result as unknown as T[];
+};
+
+const findValue = <T = any>(data: object, paths: Path[], fallback: T, type: string) => {
+  let result = data as any;
+  for (let i = 0; i < paths.length; i += 1) {
+    result = find(result, paths[i]);
+  }
+  if (typeof result === type) {
+    return result as T;
+  }
+  return fallback;
 };
 
 const toRandCoord = ({ x, y }: { x: number; y: number }, maxRadius: number) => () => {

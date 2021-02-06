@@ -6,6 +6,7 @@ import { reverse } from "ramda";
 type Props = {
   __typename?: string;
   id: string;
+  className?: string | Record<string, string>;
   labels?: GraphNodeLabel[];
   labelFontSize: number;
   labelRadius: number;
@@ -14,6 +15,7 @@ type Props = {
   nameFontSize: number;
   nodeColorScale: (__typename: string) => string;
   radius: number;
+  style: React.SVGAttributes<SVGGElement>["style"] | undefined;
 }
 
 const toLinkTypename = (__typename: string | undefined) => __typename ? `${__typename.toLowerCase()}s` : "";
@@ -21,6 +23,7 @@ const toLinkTypename = (__typename: string | undefined) => __typename ? `${__typ
 export const Node = ({
   __typename = "",
   id,
+  className,
   labels = [],
   labelFontSize,
   labelRadius,
@@ -29,27 +32,30 @@ export const Node = ({
   nameFontSize,
   nodeColorScale,
   radius,
+  style,
 }: Props) => (
   <g
     key={`node-${id}`}
-    className="node"
+    className={`node ${!className || typeof className === "string" ? className : className[__typename]}`}
+    style={!style || !style[__typename] ? style : style[__typename]}
   >
     <a
       className={styles.svgLink}
       href={`/${toLinkTypename(__typename)}/${id}`}
     >
-      {reverse(labels).map(({ id: labelId, __typename = "" }, i) => (
-        <circle
-          key={`circle-${id}-${labelId}`} r={radius + labelRadius * (labels.length - i)}
-          fill={labelScales[__typename](labelId)}
-        />
-      ))}
       <circle
         key={`circle-${id}`}
         id={id}
         r={radius}
         fill={nodeColorScale(__typename)}
-      />
+      >
+        {reverse(labels).map(({ id: labelId, __typename = "" }, i) => (
+          <circle
+            key={`circle-${id}-${labelId}`} r={radius + labelRadius * (labels.length - i)}
+            fill={labelScales[__typename](labelId)}
+          />
+        ))}
+      </circle>
       <text
         key={`label-${id}`}
         className={styles.svgNodeText}

@@ -3,8 +3,6 @@ import { drag } from "d3-drag";
 import {
   forceCollide,
   forceLink,
-  forceX,
-  forceY,
   forceManyBody,
   forceSimulation,
 } from "d3-force";
@@ -40,31 +38,42 @@ const onDragEnd = (event: any) => {
 type Config = {
   forces: Forces;
   groups: GraphGroup[];
+  height: number;
   links: GraphLink[];
   nodes: GraphNode[];
   nodeRadius: number;
   svg: SVGSVGElement;
+  width: number;
 };
 
-export const computeSimulation = async ({ forces, groups, links, nodes, nodeRadius, svg }: Config) => {
+export const computeSimulation = async ({ forces, groups, height, links, nodes, nodeRadius, svg, width }: Config) => {
   const groupsSelection = select(svg).selectAll(".group").data(groups);
-  const nodesSelection = select(svg).selectAll(".node").data(nodes);
+  const nodesSelection = select(svg).selectAll(".node > a > circle").data(nodes);
+  const nodeTextsSelection = select(svg).selectAll(".node > a > text").data(nodes);
   const linksSelection = select(svg).selectAll(".link").data(links);
 
   const quarterNodeRadius = nodeRadius / 4;
 
+  const xRange = [-width / 2 + nodeRadius, width / 2 - nodeRadius];
+  const yRange = [-height / 2 + nodeRadius, height / 2 - nodeRadius];
+  const getX = (x: number) => Math.max(xRange[0], Math.min(x, xRange[1]));
+  const getY = (y: number) => Math.max(yRange[0], Math.min(y, yRange[1]));
+
   // @ts-ignore
   simulation.nodes(nodes).on("tick", () => {
+    nodesSelection
+      .attr("cx", d => d.x = getX(d.x))
+      .attr("cy", d => d.y = getY(d.y))
+    nodeTextsSelection.attr("transform", ({ x, y }) => `translate(${getX(x)},${getY(y)})`);
     linksSelection // @ts-ignore
       .attr("x1", ({ source }) => source.x) // @ts-ignore
       .attr("y1", ({ source }) => source.y) // @ts-ignore
       .attr("x2", ({ target }) => target.x) // @ts-ignore
       .attr("y2", ({ target }) => target.y) // @ts-ignore
-    nodesSelection.attr("transform", ({ x, y }) => `translate(${x},${y})`);
 
     const centroids = mapObjIndexed(
       (nodes: GraphNode[]) => {
-        const [x, y] = polygonCentroid(nodes.map(({ x, y }) => [x, y]));
+        const [x, y] = polygonCentroid(nodes.map(({ x, y }) => [getX(x), getY(y)]));
         return `translate(${x},${y+quarterNodeRadius})`;
       }, // @ts-ignore
       groupBy(view(lensProp("group")), nodesSelection.data()),
@@ -80,9 +89,13 @@ export const computeSimulation = async ({ forces, groups, links, nodes, nodeRadi
       .on("end", onDragEnd)
   );
 
-  const linkForce = forceLink(links)
-    .id(view(lensProp("id")))
-    .distance(forces.link.distance)
+  const linkForce = forceLink(links).id(view(lensProp("id")));
+
+  if (forces.link.distance) {
+    linkForce.distance(forces.link.distance)
+  } else { // @ts-ignore
+    linkForce.strength(forces.link.strength);
+  }
 
   const collisionForce = forceCollide()
     .strength(forces.collision.strength)
@@ -99,18 +112,16 @@ export const computeSimulation = async ({ forces, groups, links, nodes, nodeRadi
   simulation // @ts-ignore
     .force("link", linkForce)
     .force("collision", collisionForce)
-    .force("repulsion", repulsionForce)
-    .force("x", forceX())
-    .force("y", forceY())
+    .force("repulsion", repulsionForce);
 
   for (let i = 0; i < groups.length; i += 1) {
     const { key } = groups[i];
     const adhesion = forceManyBody()
-      .strength(forces.subClusterAdhesion.strength)
-      .distanceMin(forces.subClusterAdhesion.minRangeRatio * nodeRadius)
+      .strength(forces.group.adhesion.strength)
+      .distanceMin(forces.group.adhesion.minRange);
     const repulsion = forceManyBody()
-      .strength(forces.subClusterRepulsion.strength)
-      .distanceMax(forces.subClusterRepulsion.maxRangeRatio * nodeRadius);
+      .strength(forces.group.repulsion.strength)
+      .distanceMax(forces.group.repulsion.maxRange);
     const adhesionInitialize = adhesion.initialize;
     adhesion.initialize = (nodes, random) => adhesionInitialize(
       // @ts-ignore

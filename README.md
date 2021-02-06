@@ -1,42 +1,122 @@
 ## React D3 Graph
 A React component which handles converting a root object and a collection of [jmespath](https://jmespath.org/) queries into a list of nodes, links and groups.
 
-### Example
+## Example
+A small example graph with deeply nested data can be put together really quickly with the `Graph` component. Both plots come from the same data (shown at the end); the idea is that the root object contains information about a flight on Alaska Airlines from San Francisco International Airport (SFO) to Portland International Airport (PDX). The nested Alaska Airlines object contains a list of it five hubs, and in the PDX airport object in that hub list, there is a list of all airlines that flying out of PDX.
+
+#### Display graph with a root node
+![](screenshots/graph-with-root-node.png)
+
+_The link in the bottom left appears while hovering over node AAY._
 ```tsx
 import React from "react";
 import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
 
-type Airport = {
-  __typename?: "Airport";
-  uuid: string;
-  name?: string;
-  city?: string;
-  code?: string;
-  airlines?: Airline[];
-  upcomingFlights?: Flight[];
-};
+export const FlightGraph = () => (
+  <>
+    <h2>Flight: {flight.code}</h2>
+    <Graph
+      idField="uuid"
+      defaultNameField="code"
+      fontSize={{ nodeName: 7 }}
+      root={flight}
+      config={{
+        name: ({ code }) => `Flight ${code}`,
+        links: [
+          {
+            nodes: [
+              {
+                path: "from",
+                name: ["code", (code: string) => `From: ${code}`],
+              },
+              {
+                path: "to",
+                name: ["code", (code: string) => `To: ${code}`],
+              },
+            ]
+          },
+          {
+            nodes: [{
+              path: "airline",
+              links: [{
+                direction: GraphLinkDirection.None,
+                nodes: [{
+                  path: "hubs",
+                  links: [{
+                    direction: GraphLinkDirection.None,
+                    nodes: [{
+                      path: "airlines",
+                    }],
+                  }],
+                }],
+              }],
+            }],
+          },
+        ],
+      }}
+    />
+  </>
+);
+```
 
-type Flight = {
-  __typename?: "Flight";
-  uuid: string;
-  code?: string;
-  from?: Airport;
-  to?: Airport;
-  airline?: Airline;
-  departure?: string;
-  arrival?: string;
-};
+#### Display Graph without a root node
+![](screenshots/graph-without-root-node.png)
 
-type Airline = {
-  __typename?: "Airline";
-  uuid: string;
-  name?: string;
-  code?: string;
-  hubs?: Airport[];
-  upcomingFlights?: Flight[];
-};
+_The link in the bottom left appears while hovering over node AAY._
+```tsx
+import React from "react";
+import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
 
-const flight = {
+export const FlightGraph = () => (
+  <>
+    <h2>Flight: {flight.code}</h2>
+    <Graph
+      idField="uuid"
+      defaultNameField="code"
+      fontSize={{ nodeName: 7 }}
+      root={flight}
+      config={[
+        {
+          name: "Flight 3368",
+          nodes: [
+            {
+              path: "from",
+              name: ["code", (code: string) => `From: ${code}`],
+            },
+            {
+              path: "to",
+              name: ["code", (code: string) => `To: ${code}`],
+            },
+          ]
+        },
+        {
+          name: "Portland Airlines",
+          nodes: [{
+            path: "airline",
+            links: [{
+              direction: GraphLinkDirection.None,
+              nodes: [{
+                path: "hubs",
+                links: [{
+                  direction: GraphLinkDirection.None,
+                  nodes: [{
+                    path: "airlines",
+                  }],
+                }],
+              }],
+            }],
+          }],
+        },
+      ]}
+    />
+  </>
+);
+```
+
+#### Example Data used above
+```ts
+// data.ts
+export const data = {
   __typename: "Flight",
   uuid: "0000-00000-0001",
   code: "3368",
@@ -60,7 +140,7 @@ const flight = {
     __typename: "Airline",
     uuid: "0000-00000-0004",
     name: "Alaska Airlines",
-    code: "UA",
+    code: "AS",
     hubs: [
       {
         __typename: "Airport",
@@ -78,6 +158,13 @@ const flight = {
       },
       {
         __typename: "Airport",
+        uuid: "0000-00000-0007",
+        name: "Ted Stevens Anchorage International Airport",
+        city: "Anchorage, AK, United States",
+        code: "ANC",
+      },
+      {
+        __typename: "Airport",
         uuid: "0000-00000-0002",
         name: "San Francisco International Airport",
         city: "San Francisco, CA, United States",
@@ -91,131 +178,104 @@ const flight = {
         code: "PDX",
         airlines: [
           {
-            uuid: "0000-00000-0007",
-            name: "Air Canada",
-            code: "AC",
-          },
-          {
+            __typename: "Airline",
             uuid: "0000-00000-0004",
             name: "Alaska Airlines",
             code: "AS",
           },
           {
+            __typename: "Airline",
             uuid: "0000-00000-0008",
+            name: "Air Canada",
+            code: "AC",
+          },
+          {
+            __typename: "Airline",
+            uuid: "0000-00000-0009",
             name: "Allegiant Air",
             code: "AAY",
           },
           {
-            uuid: "0000-00000-0009",
+            __typename: "Airline",
+            uuid: "0000-00000-0010",
             name: "American",
             code: "AA",
           },
           {
-            uuid: "0000-00000-0010",
+            __typename: "Airline",
+            uuid: "0000-00000-0011",
             name: "Boutique Air",
             code: "4B",
           },
           {
-            uuid: "0000-00000-0011",
+            __typename: "Airline",
+            uuid: "0000-00000-0012",
             name: "Condor",
             code: "DE",
           },
           {
-            uuid: "0000-00000-0012",
+            __typename: "Airline",
+            uuid: "0000-00000-0013",
             name: "Delta Air Lines",
             code: "DL",
           },
           {
-            uuid: "0000-00000-0013",
+            __typename: "Airline",
+            uuid: "0000-00000-0014",
             name: "Frontier Airlines",
             code: "F9",
           },
           {
-            uuid: "0000-00000-0014",
+            __typename: "Airline",
+            uuid: "0000-00000-0015",
             name: "Hawaiin",
             code: "HA",
           },
           {
-            uuid: "0000-00000-0015",
+            __typename: "Airline",
+            uuid: "0000-00000-0016",
             name: "JetBlue",
             code: "B6",
           },
           {
-            uuid: "0000-00000-0016",
+            __typename: "Airline",
+            uuid: "0000-00000-0017",
             name: "Southwest Airlines",
             code: "WN",
           },
           {
-            uuid: "0000-00000-0017",
+            __typename: "Airline",
+            uuid: "0000-00000-0018",
             name: "Spirit Airlines",
             code: "NK",
           },
           {
-            uuid: "0000-00000-0018",
+            __typename: "Airline",
+            uuid: "0000-00000-0019",
             name: "Sun Country Airlines",
             code: "SY",
           },
           {
-            uuid: "0000-00000-0019",
+            __typename: "Airline",
+            uuid: "0000-00000-0020",
             name: "United Airlines",
             code: "UA",
           },
           {
-            uuid: "0000-00000-0020",
+            __typename: "Airline",
+            uuid: "0000-00000-0021",
             name: "Volaris",
             code: "Y4",
           },
           {
-            uuid: "0000-00000-0021",
+            __typename: "Airline",
+            uuid: "0000-00000-0022",
             name: "WestJet Encore",
             code: "WR",
           },
         ],
       },
-      {
-        __typename: "Airport",
-        uuid: "0000-00000-0022",
-        name: "Ted Stevens Anchorage International Airport",
-        city: "Anchorage, AK, United States",
-        code: "ANC",
-      },
     ],
   },
 };
-
-export const FlightGraph = () => (
-  <>
-    <h2>Flight: {flight.code}</h2>
-    <Graph
-      idField="uuid"
-      fontSize={{ nodeName: 7 }}
-      showRoot
-      config={{
-        name: ["code", code => `Flight: ${code}`],
-        links: [
-          { node: { path: "from" } },
-          { node: { path: "to" } },
-          {
-            node: {
-              path: "airline",
-              links: [{
-                direction: GraphLinkDirection.None,
-                node: {
-                  path: "hubs",
-                  links: [{
-                    direction: GraphLinkDirection.None,
-                    node: {
-                      path: "airlines",
-                    },
-                  }],
-                },
-              }],
-            },
-          },
-        ],
-      }}
-      root={flight}
-    />
-  </>
-);
 ```

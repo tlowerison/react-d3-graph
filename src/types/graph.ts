@@ -1,8 +1,8 @@
-import { GraphLinkDirection } from "./config";
+import { GraphLinkDirection } from "./common";
 
 export interface GraphGroup {
   key: string;
-  label: string;
+  name: string;
   size: number;
 }
 
@@ -10,9 +10,19 @@ export interface GraphNode {
   [index: string]: any;
   id: any;
   name: string;
-  labels?: GraphNodeLabel[];
+  degree: GraphNodeDegree;
+  labels: GraphNodeLabel[];
   radius: number;
+   style:
+     | React.SVGAttributes<SVGGElement>["style"]
+     | Record<string, React.SVGAttributes<SVGGElement>["style"]>
+     | undefined;
   __typename?: string | undefined;
+}
+
+export interface GraphNodeDegree {
+  in: number;
+  out: number;
 }
 
 export interface GraphNodeLabel {
@@ -23,10 +33,14 @@ export interface GraphNodeLabel {
 }
 
 export interface GraphLink {
-  labels?: string[];
+  className: string | undefined;
+  labels: string[];
   direction: GraphLinkDirection;
   source: any;
+  sourceDegree: GraphNodeDegree;
+  style: React.SVGAttributes<SVGGElement>["style"] | undefined;
   target: any;
+  targetDegree: GraphNodeDegree;
 }
 
 export interface Forces {
@@ -34,19 +48,22 @@ export interface Forces {
     strength: number;
   };
   link: {
-    distance: number;
+    distance?: number;
+    strength: number | ((link: GraphLink) => number);
   };
   repulsion: {
     distanceMax?: number;
     distanceMin?: number;
     strength: number;
   };
-  subClusterAdhesion: {
-    minRangeRatio: number;
-    strength: number;
-  };
-  subClusterRepulsion: {
-    maxRangeRatio: number;
-    strength: number;
+  group: {
+    adhesion: {
+      strength: number;
+      minRange: number;
+    };
+    repulsion: {
+      strength: number;
+      maxRange: number;
+    };
   };
 }

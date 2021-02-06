@@ -6,8 +6,12 @@ type Props = Omit<GraphLink, "direction"> & {
   markerEnd: boolean;
 };
 
-export const Link = ({ labels, markerEnd, source, target }: Props) => (
-  <g key={`link-${source}-${target}`}>
+export const Link = ({ className, labels, markerEnd, source, style, target }: Props) => (
+  <g
+    key={`link-${source}-${target}`}
+    className={className}
+    style={style}
+  >
     <line
       id={`${source}-${target}`}
       className="link"

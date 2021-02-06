@@ -11,6 +11,7 @@ import { select } from "d3-selection";
 import { fromPairs, uniq, unnest } from "ramda";
 import { useGraph } from "./use-graph";
 
+export * from "./types/common";
 export * from "./types/config";
 export * from "./use-graph";
 
@@ -21,10 +22,13 @@ const defaultFontSize = {
   nodeLabel: 7,
   nodeName: 9,
 };
+const defaultLinkStrength = ({ sourceDegree, targetDegree }) => 1 / (4 * Math.min(sourceDegree.out, targetDegree.out));
 
 export const Graph = <R extends Entity, S extends boolean>({
   arrowHeadSize = 6,
+  className,
   config,
+  defaultNameField = "name",
   fontSize: fontSizeConfig = defaultFontSize,
   forces: forceConfigs = {},
   getLabelColorScale = defaultGetLabelColorScale,
@@ -37,6 +41,7 @@ export const Graph = <R extends Entity, S extends boolean>({
   root,
   resolveEntities,
   showRoot,
+  style,
   width = 700,
 }: GraphProps<R, S>) => {
   const fontSize = { ...defaultFontSize, ...fontSizeConfig };
@@ -45,33 +50,36 @@ export const Graph = <R extends Entity, S extends boolean>({
   const forces: Forces = useMemo(() => ({
     collision: {
       strength: 150,
-      ...forceConfigs.collision,
+      ...(forceConfigs.collision || {}),
     },
     link: {
-      distance: 75,
-      ...forceConfigs.link,
+      strength: defaultLinkStrength,
+      ...(forceConfigs.link || {}),
     },
     repulsion: {
-      strength: -600,
-      ...forceConfigs.repulsion,
+      strength: -280,
+      distanceMax: 150,
+      ...(forceConfigs.repulsion || {}),
     },
-    subClusterAdhesion: {
-      minRangeRatio: 16,
-      strength: 700,
-      ...forceConfigs.subClusterAdhesion,
-    },
-    subClusterRepulsion: {
-      maxRangeRatio: 3,
-      strength: -50,
-      ...forceConfigs.subClusterRepulsion,
+    group: {
+      adhesion: {
+        strength: 700,
+        minRange: 100,
+        ...(forceConfigs.group?.adhesion || {}),
+      },
+      repulsion: {
+        strength: -400,
+        maxRange: 250,
+        ...(forceConfigs.group?.repulsion || {}),
+      },
     },
   }), [forceConfigs]);
 
   const { groups, links, nodes } = useGraph({
     config,
+    defaultNameField,
     height,
     idField,
-    linkDistance: forces.link.distance,
     nodeRadius,
     root,
     resolveEntities: Boolean(resolveEntities),
@@ -117,15 +125,20 @@ export const Graph = <R extends Entity, S extends boolean>({
       (async () => {
         const svg = svgRef.current;
         if (svg) {
-          computeSimulation({ forces, groups, links, nodes, nodeRadius, svg });
+          computeSimulation({ forces, groups, height, links, nodes, nodeRadius, svg, width });
         }
       })();
     },
-    [forces, groups, links, nodes, nodeRadius, svgRef],
+    [forces, groups, height, links, nodes, nodeRadius, svgRef, width],
   );
 
   return (
-    <svg ref={svgRef} viewBox={`${-width / 2} ${-height / 2} ${width} ${height}`}>
+    <svg
+      ref={svgRef}
+      className={className}
+      style={style}
+      viewBox={`${-width / 2} ${-height / 2} ${width} ${height}`}
+    >
       <g>
         {links.map(({ direction, ...link }) => direction === GraphLinkDirection.Both ? (
           <>
@@ -147,12 +160,12 @@ export const Graph = <R extends Entity, S extends boolean>({
             {...node}
           />
         ))}
-        {groups.map(({ key, label, size }, i) => size === 0 ? null : (
+        {groups.map(({ key, name, size }, i) => size === 0 ? null : (
           <Group
-            key={key || `${i}-label-${label || ""}`}
+            key={key || `${i}-name-${name || ""}`}
             fontSize={fontSize.groupName}
             groupLabelOpacity={groupLabelOpacity}
-            label={label}
+            name={name}
           />
         ))}
       </g>
