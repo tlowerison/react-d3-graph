@@ -7,7 +7,6 @@ A small example graph with deeply nested data can be put together really quickl
 #### Display graph with a root node
 ![](screenshots/graph-with-root-node.png)
 
-_The link in the bottom left appears while hovering over node AAY._
 ```tsx
 import React from "react";
 import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
@@ -62,7 +61,6 @@ export const FlightGraph = () => (
 #### Display Graph without a root node
 ![](screenshots/graph-without-root-node.png)
 
-_The link in the bottom left appears while hovering over node AAY._
 ```tsx
 import React from "react";
 import { Graph, GraphLinkDirection } from "@tlowerison/react-d3-graph";
