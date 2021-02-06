@@ -36,7 +36,7 @@ export const Node = ({
 }: Props) => (
   <g
     key={`node-${id}`}
-    className={`node ${!className || typeof className === "string" ? className : className[__typename]}`}
+    className={`node ${(!className || typeof className === "string" ? className : className[__typename]) || ""}`}
     style={!style || !style[__typename] ? style : style[__typename]}
   >
     <a

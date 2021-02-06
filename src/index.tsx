@@ -5,6 +5,7 @@ import { Group } from "./group";
 import { Link } from "./link";
 import { Node } from "./node";
 import { computeSimulation } from "./compute-simulation";
+import { expectedWindowWidth } from "./constants";
 import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10, schemeTableau10 } from "d3-scale-chromatic";
 import { select } from "d3-selection";
@@ -125,11 +126,22 @@ export const Graph = <R extends Entity, S extends boolean>({
       (async () => {
         const svg = svgRef.current;
         if (svg) {
-          computeSimulation({ forces, groups, height, links, nodes, nodeRadius, svg, width });
+          computeSimulation({
+            forces,
+            groups,
+            height,
+            labelRadius,
+            links,
+            nameFontSize: fontSize.nodeName,
+            nodes,
+            nodeRadius,
+            svg,
+            width,
+          });
         }
       })();
     },
-    [forces, groups, height, links, nodes, nodeRadius, svgRef, width],
+    [fontSize.nodeName, forces, groups, height, labelRadius, links, nodes, nodeRadius, svgRef, width],
   );
 
   return (
@@ -137,7 +149,7 @@ export const Graph = <R extends Entity, S extends boolean>({
       ref={svgRef}
       className={className}
       style={style}
-      viewBox={`${-width / 2} ${-height / 2} ${width} ${height}`}
+      viewBox={`${-width * window.innerWidth / expectedWindowWidth / 2} ${-height / 2} ${width * window.innerWidth / expectedWindowWidth} ${height}`}
     >
       <g>
         {links.map(({ direction, ...link }) => direction === GraphLinkDirection.Both ? (

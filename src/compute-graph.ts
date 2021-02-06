@@ -42,19 +42,10 @@ export const computeGraph = async <R>({
     const { key: preKey, name, nodes: nodeConfigs } = config[i];
     const key = preKey || `${i}-name-${name || ""}`;
     const [nodes, links] = getNodesAndLinks({ defaultNameField, idField, nodeConfigs, nodeRadius, root });
-    // TODO: Initialize clusters using a quadtree to avoid initial collisions
-    let x = 0;
-    let y = 0;
-    if (config.length > 1) {
-      x = width / 2 * (Math.random() - 1/2);
-      y = height / 2 * (Math.random() - 1/2);
-    }
-    const randCoord = toRandCoord({ x, y }, 7.5 * nodeRadius * Math.sqrt(nodes.length - 1))
     groups[i] = { key, name: name || "", size: nodes.length };
     allLinks[i] = links;
     allNodes[i] = nodes.map(({ labels, ...rest }) => ({
       ...rest,
-      ...randCoord(),
       group: key,
       labels: uniqBy(view(lensProp("id")), labels || []),
     })) as GraphNode[];
@@ -72,7 +63,14 @@ export const computeGraph = async <R>({
     }
     nodes = Array.from(nodeSet.values());
   }
-  return { groups, links: unnest(allLinks) as GraphLink[], nodes: unnest(allNodes) as GraphNode[] };
+  return {
+    groups,
+    links: unnest(allLinks) as GraphLink[],
+    nodes: nodes.map((node, i) => ({
+      ...node,
+      // TODO: Initialize clusters using a quadtree to avoid initial collisions
+    })) as GraphNode[],
+  };
 };
 
 type GetNodesAndLinksConfig<R extends Entity> = {
@@ -228,13 +226,4 @@ const findValue = <T = any>(data: object, paths: Path[], fallback: T, type: stri
     return result as T;
   }
   return fallback;
-};
-
-const toRandCoord = ({ x, y }: { x: number; y: number }, maxRadius: number) => () => {
-  const radius = maxRadius * Math.random();
-  const angle = 2 * Math.PI * Math.random();
-  return {
-    x: x + radius * Math.cos(angle),
-    y: y + radius * Math.sin(angle),
-  };
 };

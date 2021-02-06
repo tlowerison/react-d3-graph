@@ -1,5 +1,6 @@
 import { Forces, GraphGroup, GraphLink, GraphNode } from "./types";
 import { drag } from "d3-drag";
+import { expectedWindowWidth } from "./constants";
 import {
   forceCollide,
   forceLink,
@@ -39,32 +40,55 @@ type Config = {
   forces: Forces;
   groups: GraphGroup[];
   height: number;
+  labelRadius: number;
   links: GraphLink[];
+  nameFontSize: number;
   nodes: GraphNode[];
   nodeRadius: number;
   svg: SVGSVGElement;
   width: number;
 };
 
-export const computeSimulation = async ({ forces, groups, height, links, nodes, nodeRadius, svg, width }: Config) => {
+export const computeSimulation = async ({
+  forces,
+  groups,
+  height,
+  labelRadius,
+  links,
+  nameFontSize,
+  nodes,
+  nodeRadius,
+  svg,
+  width,
+}: Config) => {
   const groupsSelection = select(svg).selectAll(".group").data(groups);
   const nodesSelection = select(svg).selectAll(".node > a > circle").data(nodes);
   const nodeTextsSelection = select(svg).selectAll(".node > a > text").data(nodes);
   const linksSelection = select(svg).selectAll(".link").data(links);
 
-  const quarterNodeRadius = nodeRadius / 4;
+  select(window).on('resize.updatesvg', () => {
+    select(svg).attr("viewBox", `${-width * window.innerWidth / expectedWindowWidth / 2} ${-height / 2} ${width * window.innerWidth / expectedWindowWidth} ${height}`);
+  });
 
-  const xRange = [-width / 2 + nodeRadius, width / 2 - nodeRadius];
-  const yRange = [-height / 2 + nodeRadius, height / 2 - nodeRadius];
-  const getX = (x: number) => Math.max(xRange[0], Math.min(x, xRange[1]));
-  const getY = (y: number) => Math.max(yRange[0], Math.min(y, yRange[1]));
+  const quarterNodeRadius = nodeRadius / 4;
 
   // @ts-ignore
   simulation.nodes(nodes).on("tick", () => {
+    const xRange = [-width * window.innerWidth / expectedWindowWidth / 2, width * window.innerWidth / expectedWindowWidth / 2];
+    const yRange = [-height / 2, height / 2 - 2];
+    const getX = (x: number, width: number = nodeRadius) => Math.max(xRange[0] + width, Math.min(x, xRange[1] - width));
+    const getY = (y: number, height: number = nodeRadius) => Math.max(yRange[0] + height, Math.min(y, yRange[1] - height));
     nodesSelection
       .attr("cx", d => d.x = getX(d.x))
       .attr("cy", d => d.y = getY(d.y))
-    nodeTextsSelection.attr("transform", ({ x, y }) => `translate(${getX(x)},${getY(y)})`);
+    nodeTextsSelection.attr("transform", function({ labels, x, y }) {
+      // @ts-ignore
+      const bBox = this.getBBox && this?.getBBox();
+      const width = bBox?.width || 2 * nodeRadius;
+      const height = bBox?.height || 2 * nodeRadius;
+      const textYMargin = nodeRadius + nameFontSize + (labels.length + 1) * labelRadius;
+      return `translate(${getX(x, width / 2)},${getY(y + textYMargin, height / 2) - textYMargin})`;
+    });
     linksSelection // @ts-ignore
       .attr("x1", ({ source }) => source.x) // @ts-ignore
       .attr("y1", ({ source }) => source.y) // @ts-ignore
@@ -74,11 +98,18 @@ export const computeSimulation = async ({ forces, groups, height, links, nodes, 
     const centroids = mapObjIndexed(
       (nodes: GraphNode[]) => {
         const [x, y] = polygonCentroid(nodes.map(({ x, y }) => [getX(x), getY(y)]));
-        return `translate(${x},${y+quarterNodeRadius})`;
+        return [x, y + quarterNodeRadius];
       }, // @ts-ignore
       groupBy(view(lensProp("group")), nodesSelection.data()),
     ); // @ts-ignore
-    groupsSelection.attr("transform", ({ key }) => centroids[key]);
+    groupsSelection.attr("transform", function({ key }) {
+      // @ts-ignore
+      const bBox = this.getBBox && this?.getBBox();
+      const width = bBox?.width || 2 * nodeRadius;
+      const height = bBox?.height || 2 * nodeRadius;
+      const [x, y] = centroids[key];
+      return `translate(${getX(x, width / 2)},${getY(y + quarterNodeRadius, height / 2) - quarterNodeRadius})`;
+    });
   });
 
   nodesSelection.call( // @ts-ignore
